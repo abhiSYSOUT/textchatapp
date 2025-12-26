@@ -1,6 +1,7 @@
 # Spring Boot WebSocket Chat Application
 
 A real-time text chat application built with Spring Boot and WebSockets. It supports public group chat, one-to-one private messaging, and online user tracking.
+This has been developed using Antigravity from Google.
 
 ## Architecture
 
@@ -19,7 +20,7 @@ The application follows a standard client-server architecture using WebSockets f
     - `@MessageMapping("/chat.private")`: Routes private messages to a specific user's queue (`/user/{username}/queue/messages`).
     - `@EventListener`: Listens for `SessionDisconnectEvent` to handle user disconnections.
 - **`CustomHandshakeHandler` & `UserPrincipal`**: Custom components to assign a `Principal` to each WebSocket session based on the username passed during the handshake. This is crucial for enabling Spring's `convertAndSendToUser` functionality for private messaging.
-- **`ChatMessage`**: The data model for chat messages, including content, sender, recipient, and type (CHAT, JOIN, LEAVE).
+- **`ChatMessage`**: The data model for chat messages, including content, sender, recipient, and type (CHAT, JOIN, LEAVE, OFFER, ANSWER, ICE).
 
 ### Frontend
 - **Technologies**: HTML5, CSS3, JavaScript (ES6).
@@ -34,6 +35,8 @@ The application follows a standard client-server architecture using WebSockets f
     - `/topic/users`: Listens for updates to the online user list.
     - `/user/queue/messages`: Listens for private messages sent specifically to the logged-in user.
 - **State Management**: Maintains a local `chatHistory` to persist messages when switching between public and private chat views.
+- **WebRTC Signaling**: Uses the existing WebSocket connection to exchange SDP Offers, Answers, and ICE Candidates for video calls.
+- **Video Calls**: Manages `RTCPeerConnection` to establish peer-to-peer video/audio streams.
 
 ## Features
 - **Public Chat**: Broadcast messages to all connected users.
@@ -41,6 +44,7 @@ The application follows a standard client-server architecture using WebSockets f
 - **Online User List**: Real-time updates of who is currently connected.
 - **User Search**: Filter the online user list.
 - **Message Persistence**: Client-side history preserves messages when switching chat tabs.
+- **WebRTC Video Calling**: Peer-to-peer video and audio calling support in private chats.
 
 ## How to Run
 

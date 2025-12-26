@@ -59,6 +59,14 @@ function onConnected() {
     )
 
     connectingElement.classList.add('hidden');
+
+    // Fetch public history on initial connection
+    fetch('/messages/public')
+        .then(response => response.json())
+        .then(messages => {
+            messages.forEach(renderMessage);
+            messageArea.scrollTop = messageArea.scrollHeight;
+        });
 }
 
 
@@ -121,7 +129,16 @@ function onPrivateMessageReceived(payload) {
 }
 
 function onUserListReceived(payload) {
-    userList = JSON.parse(payload.body);
+    try {
+        if (payload.body) {
+            userList = JSON.parse(payload.body);
+        } else {
+            userList = [];
+        }
+    } catch (e) {
+        console.error("Error parsing user list:", e);
+        userList = [];
+    }
     updateUserList();
 }
 
@@ -132,10 +149,32 @@ function updateUserList() {
     var searchInput = document.getElementById('user-search');
     var filter = searchInput.value.toLowerCase();
 
-    userList.forEach(function (user) {
-        if (user !== username && user.toLowerCase().includes(filter)) {
+    // Filter out self
+    userList.forEach(function (userObj) {
+        var user = null;
+        var status = 'OFFLINE'; // Default status
+
+        if (typeof userObj === 'string') {
+            user = userObj;
+        } else if (userObj && typeof userObj === 'object' && userObj.username) {
+            user = userObj.username;
+            if (userObj.status) {
+                status = userObj.status;
+            }
+        } else {
+            console.warn("Invalid user object received:", userObj);
+            return; // Skip this entry if it's malformed
+        }
+
+        if (user && user !== username && user.toLowerCase().includes(filter)) {
             var li = document.createElement('li');
             li.textContent = user;
+
+            // Add status indicator class
+            if (status) {
+                li.classList.add(status.toLowerCase());
+            }
+
             if (user === selectedUser) {
                 li.classList.add('active');
             }
@@ -146,13 +185,13 @@ function updateUserList() {
                 document.getElementById('messageArea').innerHTML = ''; // Clear chat area for new context
                 document.getElementById('video-call-btn').classList.remove('hidden');
 
-                // Restore history
-                if (chatHistory[selectedUser]) {
-                    chatHistory[selectedUser].forEach(function (msg) {
-                        renderMessage(msg);
+                // Fetch private history from server
+                fetch('/messages/' + username + '/' + selectedUser)
+                    .then(response => response.json())
+                    .then(messages => {
+                        messages.forEach(renderMessage);
+                        messageArea.scrollTop = messageArea.scrollHeight;
                     });
-                }
-                messageArea.scrollTop = messageArea.scrollHeight; // Scroll to bottom after loading history
             };
             userListElement.appendChild(li);
         }
@@ -175,13 +214,13 @@ function updateUserList() {
             localStream.getTracks().forEach(track => track.stop());
         }
 
-        // Restore public history
-        if (chatHistory['public']) {
-            chatHistory['public'].forEach(function (msg) {
-                renderMessage(msg);
+        // Fetch public history from server
+        fetch('/messages/public')
+            .then(response => response.json())
+            .then(messages => {
+                messages.forEach(renderMessage);
+                messageArea.scrollTop = messageArea.scrollHeight;
             });
-        }
-        messageArea.scrollTop = messageArea.scrollHeight; // Scroll to bottom after loading history
     };
     userListElement.insertBefore(publicLi, userListElement.firstChild);
 }
@@ -189,23 +228,9 @@ function updateUserList() {
 document.getElementById('user-search').addEventListener('input', updateUserList);
 
 function displayMessage(message) {
-    // Store in history
-    if (message.type === 'CHAT') {
-        if (message.recipient) {
-            // Private message
-            var otherUser = message.sender === username ? message.recipient : message.sender;
-            if (!chatHistory[otherUser]) {
-                chatHistory[otherUser] = [];
-            }
-            chatHistory[otherUser].push(message);
-        } else {
-            // Public message
-            chatHistory['public'].push(message);
-        }
-    } else {
-        // Event messages (JOIN/LEAVE) - typically public
-        chatHistory['public'].push(message);
-    }
+    // message is already rendered, no need to push to local history if we rely on server for hydration
+    // But we might want to keep it to avoid re-fetching if we switch tabs? 
+    // For now, let's just render. The 'push to history' logic is removed as server is SOT.
 
     // Render only if it belongs to the current view
     var shouldRender = false;
@@ -254,9 +279,10 @@ function renderMessage(message) {
             avatarElement.appendChild(imgElement);
             avatarElement.style.backgroundColor = 'transparent';
         } else {
-            var avatarText = document.createTextNode(message.sender[0].toUpperCase());
+            var initial = (message.sender && message.sender.length > 0) ? message.sender[0].toUpperCase() : '?';
+            var avatarText = document.createTextNode(initial);
             avatarElement.appendChild(avatarText);
-            avatarElement.style['background-color'] = getAvatarColor(message.sender);
+            avatarElement.style['background-color'] = getAvatarColor(message.sender || 'default');
         }
 
         messageElement.appendChild(avatarElement);

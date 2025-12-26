@@ -2,6 +2,7 @@ package com.sample;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
@@ -19,6 +20,7 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import com.sample.model.ChatMessage;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,6 +31,9 @@ public class WebSocketChatTest {
     @LocalServerPort
     private int port;
 
+    @Autowired
+    private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+
     private WebSocketStompClient stompClient;
 
     @BeforeEach
@@ -38,7 +43,9 @@ public class WebSocketChatTest {
         SockJsClient sockJsClient = new SockJsClient(transports);
 
         this.stompClient = new WebSocketStompClient(sockJsClient);
-        this.stompClient.setMessageConverter(new MappingJackson2MessageConverter());
+        MappingJackson2MessageConverter converter = new MappingJackson2MessageConverter();
+        converter.setObjectMapper(objectMapper);
+        this.stompClient.setMessageConverter(converter);
     }
 
     @Test
@@ -66,7 +73,7 @@ public class WebSocketChatTest {
         chatMessage.setSender("TestUser");
         chatMessage.setContent("Hello, World!");
         chatMessage.setAvatarUrl("http://example.com/avatar.png");
-        chatMessage.setType(ChatMessage.MessageType.CHAT);
+        chatMessage.setType(ChatMessage.MessageType.CHAT.name());
 
         session.send("/app/chat.sendMessage", chatMessage);
 

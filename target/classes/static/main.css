@@ -289,17 +289,51 @@ button.accent {
 }
 
 #user-list li {
-    padding: 10px 15px;
+    padding: 10px;
+    margin-bottom: 10px;
+    background-color: #f1f1f1;
+    border-radius: 5px;
     cursor: pointer;
-    border-bottom: 1px solid #f4f4f4;
+    display: flex;
+    /* alignment */
+    align-items: center;
+    /* vertical center */
+    position: relative;
+    /* for dot */
 }
 
 #user-list li:hover {
-    background-color: #f9f9f9;
+    background-color: #e0e0e0;
 }
 
 #user-list li.active {
-    background-color: #e3f2fd;
+    background-color: #007bff;
+    color: white;
+}
+
+/* Status dots */
+#user-list li::after {
+    content: ' ';
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    position: absolute;
+    right: 10px;
+}
+
+#user-list li.online::after {
+    background-color: #28a745;
+    /* Green */
+}
+
+#user-list li.offline::after {
+    background-color: #aaa;
+    /* Grey */
+}
+
+#user-list li.active::after {
+    border: 2px solid white;
+    /* make it visible on blue bg */
 }
 
 .messages-container {
